@@ -7,6 +7,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import Normalizer
 
 def fit_predict_eval(model, features_train, features_test, target_train, target_test):
 
@@ -29,6 +30,10 @@ x_train_flattened = x_train.reshape(x_train.shape[0], -1)
 
 x_train_part, x_test_part, y_train_part, y_test_part = train_test_split(x_train_flattened, y_train, test_size=0.3, random_state=40)
 
+normalizer = Normalizer()
+x_train_norm = normalizer.fit_transform(x_train_part)
+x_test_norm = normalizer.transform(x_test_part)
+
 models = [
     KNeighborsClassifier(),
     DecisionTreeClassifier(random_state=40),
@@ -38,8 +43,13 @@ models = [
 
 accuracies = []
 for model in models:
-    accuracy = fit_predict_eval(model, x_train_part, x_test_part, y_train_part, y_test_part)
+    accuracy = fit_predict_eval(model, x_train_norm, x_test_norm, y_train_part, y_test_part)
     accuracies.append((model.__class__.__name__, accuracy))
 
-best_model = max(accuracies, key=lambda x: x[1])
-print(f'The answer to the question: {best_model[0]} = {best_model[1]:.4f}')
+accuracies_sorted = sorted(accuracies, key=lambda x: x[1], reverse=True)
+
+improvement = any(acc > 0.9 for _, acc in accuracies_sorted)
+
+print(f"The answer to the 1st question: {'yes' if improvement else 'no'}")
+print(f"The answer to the 2nd question: {accuracies_sorted[0][0]}-{accuracies_sorted[0][1]:.3f}, "
+      f"{accuracies_sorted[1][0]}-{accuracies_sorted[1][1]:.3f}")
