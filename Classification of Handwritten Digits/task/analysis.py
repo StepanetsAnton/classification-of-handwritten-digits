@@ -8,6 +8,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.preprocessing import Normalizer
+from sklearn.model_selection import train_test_split, GridSearchCV
 
 def fit_predict_eval(model, features_train, features_test, target_train, target_test):
 
@@ -17,8 +18,8 @@ def fit_predict_eval(model, features_train, features_test, target_train, target_
 
     score = accuracy_score(target_test, predictions)
 
-    print(f'Model: {model.__class__.__name__}')
-    print(f'Accuracy: {score:.4f}\n')
+    #print(f'Model: {model.__class__.__name__}')
+    #print(f'Accuracy: {score:.4f}\n')
     return score
 
 (x_train, y_train), (_, _) = tf.keras.datasets.mnist.load_data()
@@ -34,22 +35,33 @@ normalizer = Normalizer()
 x_train_norm = normalizer.fit_transform(x_train_part)
 x_test_norm = normalizer.transform(x_test_part)
 
-models = [
-    KNeighborsClassifier(),
-    DecisionTreeClassifier(random_state=40),
-    LogisticRegression(max_iter=1000, random_state=40),
-    RandomForestClassifier(random_state=40)
-]
+knn_param_grid = {
+    'n_neighbors': [3, 4],
+    'weights': ['uniform', 'distance'],
+    'algorithm': ['auto', 'brute']
+}
 
-accuracies = []
-for model in models:
-    accuracy = fit_predict_eval(model, x_train_norm, x_test_norm, y_train_part, y_test_part)
-    accuracies.append((model.__class__.__name__, accuracy))
+rf_param_grid = {
+    'n_estimators': [300, 500],
+    'max_features': ['sqrt', 'log2'],
+    'class_weight': ['balanced', 'balanced_subsample'],
+    'random_state': [40]
+}
 
-accuracies_sorted = sorted(accuracies, key=lambda x: x[1], reverse=True)
+knn_model = KNeighborsClassifier()
+knn_grid_search = GridSearchCV(estimator=knn_model, param_grid=knn_param_grid, scoring='accuracy', n_jobs=-1)
+knn_grid_search.fit(x_train_norm, y_train_part)
 
-improvement = any(acc > 0.9 for _, acc in accuracies_sorted)
+rf_model = RandomForestClassifier()
+rf_grid_search = GridSearchCV(estimator=rf_model, param_grid=rf_param_grid, scoring='accuracy', n_jobs=-1)
+rf_grid_search.fit(x_train_norm, y_train_part)
 
-print(f"The answer to the 1st question: {'yes' if improvement else 'no'}")
-print(f"The answer to the 2nd question: {accuracies_sorted[0][0]}-{accuracies_sorted[0][1]:.3f}, "
-      f"{accuracies_sorted[1][0]}-{accuracies_sorted[1][1]:.3f}")
+best_knn = knn_grid_search.best_estimator_
+knn_accuracy = fit_predict_eval(best_knn, x_train_norm, x_test_norm, y_train_part, y_test_part)
+
+best_rf = rf_grid_search.best_estimator_
+rf_accuracy = fit_predict_eval(best_rf, x_train_norm, x_test_norm, y_train_part, y_test_part)
+
+
+print(f"K-nearest neighbours algorithm\nbest estimator: {best_knn}\naccuracy: {knn_accuracy:.4f}\n")
+print(f"Random forest algorithm\nbest estimator: {best_rf}\naccuracy: {rf_accuracy:.4f}")
